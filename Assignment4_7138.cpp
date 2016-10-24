@@ -14,11 +14,8 @@ int GenerateNumber();
 
 int main(void) {
 
-	int numSem = 5;
 	int numOfProducers = 5;
 	int numOfConsumers = 5;
-
-	BOOL producerOrConsumer;
 
 	DWORD producerThreadID;
 	DWORD consumerThreadID;
@@ -29,6 +26,7 @@ int main(void) {
 	printf("In  	Out\n");
 
 	INT pNum = PRODUCER_NUM;
+	INT cNum = CONSUMER_NUM;
 
 	for (int i = 0; i < numOfProducers; i++) {
 		producers[i] = CreateThread(
@@ -40,14 +38,13 @@ int main(void) {
 			&producerThreadID
 		);
 
-		if (producers[i] == NULL) {
-			printf("CreateThread error %d", GetLastError());
-			return 1;
+		if (consumers[i] != NULL) {
+			WaitForSingleObject(producers[i], INFINITE);
 		}
 
 	}
 
-	INT cNum = CONSUMER_NUM;
+	
 
 	for (int i = 0; i < numOfConsumers; i++) {
 		consumers[i] = CreateThread(
@@ -59,9 +56,8 @@ int main(void) {
 			&consumerThreadID
 		);
 
-		if (consumers[i] == NULL) {
-			printf("CreateThread error %d", GetLastError());
-			return 1;
+		if (consumers[i] != NULL) {
+			WaitForSingleObject(producers[i], INFINITE);
 		}
 
 	}
@@ -74,14 +70,15 @@ int main(void) {
 }
 
 DWORD WINAPI ThreadDecision(LPVOID p) {
-	
+
 	INT * flag = (INT*)p;
+	int numSem = 5;
 	DWORD wait;
 	HANDLE sem;
 	sem = CreateSemaphore(
 		NULL,
-		5,
-		5,
+		1,
+		1,
 		NULL
 	);
 
@@ -94,9 +91,10 @@ DWORD WINAPI ThreadDecision(LPVOID p) {
 		if (*flag == 1) {
 			printf("%d\n", GenerateNumber());
 			ReleaseSemaphore(sem, 0, NULL);
-		} else {
-			WaitForSingleObject(sem, 0L);
+		}
+		else {
 			printf("		Consumer\n");
+			ReleaseSemaphore(sem, 0, NULL);
 		}
 		Sleep(rand() % 500 + 500);
 	}
