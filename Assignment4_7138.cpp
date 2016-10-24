@@ -7,8 +7,6 @@
 
 int * bufArray = new int[BUFFER_SIZE];
 
-int bufArrLength = sizeof(bufArray) / sizeof(int);
-
 DWORD WINAPI ThreadDecision(LPVOID p);
 int GenerateNumber();
 
@@ -38,13 +36,7 @@ int main(void) {
 			&producerThreadID
 		);
 
-		if (producers[i] != NULL) {
-			WaitForSingleObject(consumers[i], INFINITE);
-		}
-
 	}
-
-
 
 	for (int i = 0; i < numOfConsumers; i++) {
 		consumers[i] = CreateThread(
@@ -66,7 +58,6 @@ int main(void) {
 	WaitForMultipleObjects(numOfConsumers, consumers, TRUE, INFINITE);
 
 	return 0;
-
 }
 
 DWORD WINAPI ThreadDecision(LPVOID p) {
