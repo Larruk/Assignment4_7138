@@ -36,9 +36,6 @@ int main(void) {
 			&producerThreadID
 		);
 
-	}
-
-	for (int i = 0; i < numOfConsumers; i++) {
 		consumers[i] = CreateThread(
 			NULL,
 			0,
@@ -47,6 +44,10 @@ int main(void) {
 			0,
 			&consumerThreadID
 		);
+
+		if (producers[i] != NULL) {
+			WaitForSingleObject(consumers[i], INFINITE);
+		}
 
 		if (consumers[i] != NULL) {
 			WaitForSingleObject(producers[i], INFINITE);
