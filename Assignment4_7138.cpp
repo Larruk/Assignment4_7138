@@ -38,13 +38,13 @@ int main(void) {
 			&producerThreadID
 		);
 
-		if (consumers[i] != NULL) {
-			WaitForSingleObject(producers[i], INFINITE);
+		if (producers[i] != NULL) {
+			WaitForSingleObject(consumers[i], INFINITE);
 		}
 
 	}
 
-	
+
 
 	for (int i = 0; i < numOfConsumers; i++) {
 		consumers[i] = CreateThread(
@@ -81,11 +81,6 @@ DWORD WINAPI ThreadDecision(LPVOID p) {
 		1,
 		NULL
 	);
-
-	if (sem == NULL) {
-		printf("CreateSemaphore error: %d\n", GetLastError());
-		return 1;
-	}
 
 	while (true) {
 		if (*flag == 1) {
