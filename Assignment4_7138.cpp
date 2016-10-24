@@ -5,21 +5,26 @@
 #define PRODUCER_NUM  1
 #define CONSUMER_NUM  0
 
-int * bufArray = new int[BUFFER_SIZE];
+int front = 0;
+int rear = 0;
+int * buffer = new int[BUFFER_SIZE];
 
-DWORD WINAPI ThreadDecision(LPVOID p);
+int numOfProducers = 5;
+int numOfConsumers = 5;
+HANDLE * producers = new HANDLE[numOfProducers];
+HANDLE * consumers = new HANDLE[numOfConsumers];
+
+DWORD WINAPI ThreadCheck(LPVOID p);
+void Enqueue();
+void Dequeue();
 int GenerateNumber();
+bool IsEmpty();
+bool IsFull();
 
 int main(void) {
 
-	int numOfProducers = 5;
-	int numOfConsumers = 5;
-
 	DWORD producerThreadID;
 	DWORD consumerThreadID;
-
-	HANDLE * producers = new HANDLE[numOfProducers];
-	HANDLE * consumers = new HANDLE[numOfConsumers];
 
 	printf("In  	Out\n");
 
@@ -27,31 +32,15 @@ int main(void) {
 	INT cNum = CONSUMER_NUM;
 
 	for (int i = 0; i < numOfProducers; i++) {
-		producers[i] = CreateThread(
-			NULL,
-			0,
-			(LPTHREAD_START_ROUTINE)ThreadDecision,
-			(LPVOID)&pNum,
-			0,
-			&producerThreadID
-		);
+		producers[i] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ThreadCheck, (LPVOID)&pNum, 0 ,&producerThreadID);
 
-		consumers[i] = CreateThread(
-			NULL,
-			0,
-			(LPTHREAD_START_ROUTINE)ThreadDecision,
-			(LPVOID)&cNum,
-			0,
-			&consumerThreadID
-		);
+		consumers[i] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ThreadCheck, (LPVOID)&cNum, 0, &consumerThreadID);
 
-		if (producers[i] != NULL) {
+		if (producers[i] != NULL) 
 			WaitForSingleObject(consumers[i], INFINITE);
-		}
 
-		if (consumers[i] != NULL) {
+		if (consumers[i] != NULL) 
 			WaitForSingleObject(producers[i], INFINITE);
-		}
 
 	}
 
@@ -61,26 +50,21 @@ int main(void) {
 	return 0;
 }
 
-DWORD WINAPI ThreadDecision(LPVOID p) {
+DWORD WINAPI ThreadCheck(LPVOID p) {
 
 	INT * flag = (INT*)p;
 	int numSem = 5;
 	DWORD wait;
 	HANDLE sem;
-	sem = CreateSemaphore(
-		NULL,
-		1,
-		1,
-		NULL
-	);
+	sem = CreateSemaphore(NULL, 1, 1, NULL);
 
 	while (true) {
 		if (*flag == 1) {
-			printf("%d\n", GenerateNumber());
+			Enqueue();
 			ReleaseSemaphore(sem, 0, NULL);
 		}
 		else {
-			printf("		Consumer\n");
+			Dequeue();
 			ReleaseSemaphore(sem, 0, NULL);
 		}
 		Sleep(rand() % 500 + 500);
@@ -89,4 +73,30 @@ DWORD WINAPI ThreadDecision(LPVOID p) {
 	return TRUE;
 }
 
+void Enqueue() {
+
+	if (!IsFull()) {
+		buffer[rear] = GenerateNumber();
+		printf("%d\n", buffer[rear]);
+		rear++;
+	}
+
+}
+
+void Dequeue() {
+	if(!IsEmpty()){
+		int numToPrint = buffer[0];
+		printf("		%d\n", numToPrint);
+
+		for (int i = 1; i < BUFFER_SIZE; i++)
+			buffer[i - 1] = buffer[i];
+			
+		rear--;
+	}
+}
+
 int GenerateNumber() { return rand() % 1000 + 1000; }
+
+bool IsEmpty() { return front == rear; }
+
+bool IsFull() { return rear == BUFFER_SIZE - 1; }
