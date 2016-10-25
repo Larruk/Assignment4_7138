@@ -1,14 +1,7 @@
-/*
-	Programmer: 7138
-	Class Number: COP 4610
-	Class Name: Operating Systems
-	CRN: 80604
-	Professor: Dr. Ingrid Buckley, PhD
-	Assignment Number: 4
-	Assignment Purpose: To apply Semaphores using the Win32 API
-	File Name: Assignment4_7138.cpp
-	File Purpose: To apply the purpose of this assignment and be the main folder to hold everything
-*/
+// assignment4__5973.cpp : Defines the entry point for the console application.
+//
+
+#include "stdafx.h"
 
 //standard library header files calls
 #include <windows.h>
@@ -27,8 +20,7 @@ int numOfProducers = 5; //maximum number of producer threads
 int numOfConsumers = 5; //maximum number of consumer threads
 HANDLE * producers = new HANDLE[numOfProducers]; //creation of producer threads
 HANDLE * consumers = new HANDLE[numOfConsumers]; //creation of consumer threads
-
-//function prototypes
+												 //function prototypes
 DWORD WINAPI ThreadCheck(LPVOID p); //check if thread is producer or consumer thread
 void Enqueue(); //add number to buffer queue
 void Dequeue(); //take number away from queue
@@ -36,18 +28,21 @@ int GenerateNumber(); //generate a random number between 1000 and 2000
 bool IsEmpty(); //check if buffer is empty
 bool IsFull(); //check if buffer is full
 
-//main function
+			   //main function
 int main(void) {
 
 	//Win32 DWORD types to thread IDs
 	DWORD producerThreadID; //holds producer thread IDs
 	DWORD consumerThreadID; //holds consumer thread IDs
 
-	printf("In  	Out\n"); //Initial required print statement
+	int numSem = 1; //maximum number of semaphores
 
-	//create Win32 INTs to pass to the ThreadCheck function
+	printf("In  		Out\n"); //Initial required print statement
+
+							 //create Win32 INTs to pass to the ThreadCheck function
 	INT pNum = PRODUCER_NUM; //hold Producer number (1)
 	INT cNum = CONSUMER_NUM; //hold Consumer number (0)
+	HANDLE sem = CreateSemaphore(NULL, numSem, numSem, L"Global\\sem1"); //create the semaphore	
 
 	//Iterate to create producer and consumer threads
 	for (int i = 0; i < numOfProducers; i++) {
@@ -57,14 +52,6 @@ int main(void) {
 
 		//create consumer threads
 		consumers[i] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ThreadCheck, (LPVOID)&cNum, 0, &consumerThreadID);
-
-		//wait for producer threads to release locks
-		if (producers[i] != NULL) 
-			WaitForSingleObject(consumers[i], INFINITE);
-
-		//wait for consumer threads to release locks
-		if (consumers[i] != NULL) 
-			WaitForSingleObject(producers[i], INFINITE);
 
 	}
 
@@ -77,21 +64,42 @@ int main(void) {
 
 //check if thread is producer or consumer thread
 DWORD WINAPI ThreadCheck(LPVOID p) {
-
 	INT * flag = (INT*)p; //Cast parameter p to a Win32 INT
-	int numSem = 1; //maximum number of semaphores
-	HANDLE sem = CreateSemaphore(NULL, numSem, numSem, NULL); //create the semaphore
+	HANDLE sem = OpenSemaphore(SEMAPHORE_ALL_ACCESS, TRUE, L"Global\\sem1");
+	srand(GetCurrentThreadId());
 
-	//infinitely check if the number passed belonged  a producer or consumer
 	while (true) {
-		if (*flag == 1) { //if the number is from a producer, add a number to the queue
-			Enqueue();
-			ReleaseSemaphore(sem, 0, NULL); //release the semaphore
-		} else { //if the number is from a consumer, remove a number from the queue
-			Dequeue();
-			ReleaseSemaphore(sem, 0, NULL); //release the semaphore
+		DWORD dwWaitResult = WaitForSingleObject(sem, rand() % 500 + 500);
+
+		switch (dwWaitResult)
+		{
+			// The semaphore object was signaled.
+			case WAIT_OBJECT_0:
+				if (*flag == 1) { //if the number is from a producer, add a number to the queue
+					Enqueue();
+				}
+				else {
+					Dequeue();
+				}
+
+				// Simulate thread spending time on task
+				Sleep(5);
+
+				// Release the semaphore when task is finished
+				if (!ReleaseSemaphore(sem, 1, NULL))
+				{
+					printf("ReleaseSemaphore error: %d\n", GetLastError());
+				}
+				break;
+
+				// The semaphore was nonsignaled, so a time-out occurred.
+			case WAIT_TIMEOUT:
+				//printf("Thread %d: wait timed out\n", GetCurrentThreadId());
+				break;
 		}
-		Sleep(rand() % 500 + 500); //Sleep for a random amount of time between 500 and 1000 milliseconds
+
+		Sleep(rand() % 500 + 500);
+
 	}
 
 	return TRUE;
@@ -101,19 +109,19 @@ DWORD WINAPI ThreadCheck(LPVOID p) {
 void Enqueue() {
 	if (!IsFull()) { //if the queue is not full
 		buffer[rear] = GenerateNumber(); //set buffer[rear] to a random number
-		printf("%d\n", buffer[rear]); //print the rear
+		printf("%d: %d\n", GetCurrentThreadId(), buffer[rear]); //print the rear
 		rear++; //increment the rear
 	}
 }
 
 //take number away from queue
-void Dequeue() { 
+void Dequeue() {
 	Sleep(100); //sleep for a tenth of a second to show that a queue was implemented
-	if(!IsEmpty()){ //if the queue is not empty
-		printf("	%d\n", buffer[front]); //print the number at the front
+	if (!IsEmpty()) { //if the queue is not empty
+		printf("		%d: %d\n", GetCurrentThreadId(), buffer[front]); //print the number at the front
 		for (int i = 1; i < BUFFER_SIZE; i++) //move all the array values up one
 			buffer[i - 1] = buffer[i];
-			
+
 		rear--; //decrement the rear
 	}
 }
